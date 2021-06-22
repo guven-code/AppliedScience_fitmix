@@ -1,0 +1,510 @@
+---
+title: "Gompertz Mixture fit of lifespan of WT BY4742, BY4741 genetic backgrounds and single deletion mutants"
+author: "Emine Guven"
+date: "10 May 2021"
+output:
+  pdf_document: default
+  word_document: default
+  html_document: default
+---
+
+```{r}
+library('varhandle')
+library('flexsurv')
+library('stringr')
+library("base")
+library("fitmix")
+```
+
+
+### load the lifespan data previously generated from "rls 2016-11-29.csv"
+#####cooked lifespans previously using "rls 2016-08-26.csv" and write outputs to the "updatedRLS_05052021.csv"
+```{r}
+lifespan_data<-read.csv("updatedRLS_05052021.csv")
+names(lifespan_data)
+```
+### mixture plot function
+```{r mixture plot function}
+plot.gompertz.components <- function(mixture,component.number,...) {
+  curve(mixture$lambda[component.number] *
+          dgompertz(x,shape=mixture$shape[component.number],
+                    rate=mixture$rate[component.number]), add=TRUE, col="darkred")}
+```             
+
+### BY4742
+```{r}
+#BY4742 plots
+WT.BY4742<- lifespan_data[lifespan_data$genotype=="BY4742",]
+#no need to filter temp==30  since I did filtering in the beginning
+#WT.BY4742.temp<-WT.BY4742[WT.BY4742$temp==30,]
+WT.BY4742.media<-WT.BY4742[WT.BY4742$media=="YPD",]
+
+WT.BY4742.media<-WT.BY4742.media[WT.BY4742.media$mat=="MATalpha",]
+
+WT.BY4742.media= WT.BY4742.media[!is.na(WT.BY4742.media[,1]), ]
+dim(WT.BY4742.media)
+
+class(WT.BY4742.media$single_lifespan)
+str(WT.BY4742.media$single_lifespan)
+```
+
+### BY4742 individuals
+```{r BY4742}
+BY4742_lifespan_list=list()
+
+for (k in c(1:length(WT.BY4742.media$single_lifespan))){
+ # k=c(94:95)
+  fk<-WT.BY4742.media$single_lifespan[k]
+  #f<-unfactor(fk[k])
+  BY4742_lifespan_single<-as.numeric(unlist(str_split(fk, ",")))
+  #BY4742_lifespan_list<-mean(ref_lifespan_single)
+  BY4742_lifespan_list[[length(BY4742_lifespan_list)+1]]<-BY4742_lifespan_single
+}
+
+length(BY4742_lifespan_list)
+cumulative_BY4742_lifespan<-unlist(BY4742_lifespan_list)
+length(cumulative_BY4742_lifespan)
+cumulative_BY4742_vector<-na.omit(cumulative_BY4742_lifespan)
+length(cumulative_BY4742_vector)
+```
+
+### mixture BY4742 
+```{r mixture BY4742 cumulative}
+cumulative_BY4742_mixGompertz<-fitmixEM(cumulative_BY4742_vector,"gompertz", 2, initial=FALSE)
+
+## original BY4742
+print(cumulative_BY4742_mixGompertz$estimate)
+print(cumulative_BY4742_mixGompertz$measures)
+```
+###BY4742 mixture plot
+```{r BY4742 mixture plot}
+dfBY4742=data.frame(lambda=c(cumulative_BY4742_mixGompertz$estimate[,1]),
+              shape=c(cumulative_BY4742_mixGompertz$estimate[,2]),
+              rate=c(cumulative_BY4742_mixGompertz$estimate[,3]))
+
+plot(hist(cumulative_BY4742_vector),col="grey",border="white",freq=FALSE,ylim=c(0,0.08))
+#pdf("plots/mixture_fits.pdf")
+lines(density(cumulative_BY4742_vector),lty=2,col="blue")
+sapply(1:2,plot.gompertz.components,mixture=dfBY4742)
+legend("topright", c("lifespan", "pdf","gompertz.mixture"), 
+       col=c("grey","blue","violet"), lwd=10,cex=0.75)
+```
+
+### BY4741
+```{r BY4741}
+WT.BY4741<- lifespan_data[lifespan_data$genotype=="BY4741",]
+WT.BY4741.media<-WT.BY4741[WT.BY4741$media=="YPD",]
+WT.BY4741.media<-WT.BY4741.media[WT.BY4741.media$mat=="MATa",]
+WT.BY4741.media= WT.BY4741.media[!is.na(WT.BY4741.media[,1]), ]
+dim(WT.BY4741.media)
+
+class(WT.BY4741.media$single_lifespan)
+str(WT.BY4741.media$single_lifespan)
+```
+
+```{r BY4741 individuals }
+### BY4741 individuals 
+BY4741_lifespan_list=list()
+
+for (k in c(1:length(WT.BY4741.media$single_lifespan))){
+  # k=c(94:95)
+  fk<-WT.BY4741.media$single_lifespan[k]
+  #f<-unfactor(fk[k])
+  BY4741_lifespan_single<-as.numeric(unlist(str_split(fk, ",")))
+  #BY4741_lifespan_list<-mean(ref_lifespan_single)
+  BY4741_lifespan_list[[length(BY4741_lifespan_list)+1]]<-BY4741_lifespan_single
+}
+
+length(BY4741_lifespan_list)
+cumulative_BY4741_lifespan<-unlist(BY4741_lifespan_list)
+length(cumulative_BY4741_lifespan)
+
+cumulative_BY4741_vector<-na.omit(cumulative_BY4741_lifespan)
+length(cumulative_BY4741_vector)
+```
+### mixture BY4741
+```{r mixture BY4741}
+#no need to do sampling cause it is already small enough
+cumulative_BY4741_mixGompertz<-fitmixEM(cumulative_BY4741_vector,"gompertz", 2, initial=FALSE)
+
+print(cumulative_BY4741_mixGompertz$estimate)
+print(cumulative_BY4741_mixGompertz$measures)
+```
+
+### mixture plot of BY4741
+```{r mixture plot BY4741}
+
+dfBY4741=data.frame(lambda=c(cumulative_BY4741_mixGompertz$estimate[,1]),
+              shape=c(cumulative_BY4741_mixGompertz$estimate[,2]),
+              rate=c(cumulative_BY4741_mixGompertz$estimate[,3]))
+
+plot(hist(cumulative_BY4741_vector),xlab="lifespan,divisions",                 col="grey",border="white",ylim=c(0,0.07),freq=FALSE)
+#pdf("plots/mixture_fitsBY4741.pdf")
+lines(density(cumulative_BY4741_vector),lty=2,col="blue")
+sapply(1:2,plot.gompertz.components,mixture=dfBY4741)
+legend("topright", c("lifespan", "pdf","gompertz.mixture"), 
+       col=c("grey","blue","violet"),
+       lwd=10,cex=0.75)
+#dev.off()
+```            
+      
+### tor1
+```{r tor1}
+tor1<- lifespan_data[lifespan_data$genotype=="tor1",]
+#WT.BY4741.temp<-WT.BY4741[WT.BY4741$temp==30,] 
+#there is no need to this since I did filtering in the beginning
+tor1.media<-tor1[tor1$media=="YPD",]
+tor1.media<-tor1.media[tor1.media$mat=="MATalpha",]
+tor1.media= tor1.media[!is.na(tor1.media[,1]), ]
+dim(tor1.media)
+
+class(tor1.media$single_lifespan)
+str(tor1.media$single_lifespan)
+```
+```{r tor1 individuals }
+### tor1 individuals 
+tor1_lifespan_list=list()
+
+for (k in c(1:length(tor1.media$single_lifespan))){
+  # k=c(94:95)
+  fk<-tor1.media$single_lifespan[k]
+  #f<-unfactor(fk[k])
+  tor1_lifespan_single<-as.numeric(unlist(str_split(fk, ",")))
+  #tor1_lifespan_list<-mean(ref_lifespan_single)
+  tor1_lifespan_list[[length(tor1_lifespan_list)+1]]<-tor1_lifespan_single
+}
+
+length(tor1_lifespan_list)
+cumulative_tor1_lifespan<-unlist(tor1_lifespan_list)
+length(cumulative_tor1_lifespan)
+
+cumulative_tor1_vector<-na.omit(cumulative_tor1_lifespan)
+length(cumulative_tor1_vector)
+```
+### mixture tor1
+```{r mixture tor1}
+#no need to do sampling cause it is already small enough
+cumulative_tor1_mixGompertz<-fitmixEM(cumulative_tor1_vector,"gompertz", 2, initial=FALSE)
+
+cumulative_tor1_mixGompertz$estimate
+cumulative_tor1_mixGompertz$measures
+```
+
+
+###mixture plot of tor1
+
+```{r mixture plot of tor1}
+dftor1=data.frame(lambda=c(cumulative_tor1_mixGompertz$estimate[,1]),
+              shape=c(cumulative_tor1_mixGompertz$estimate[,2]),
+              rate=c(cumulative_tor1_mixGompertz$estimate[,3]))
+
+plot(hist(cumulative_tor1_vector),xlab="lifespan,divisions",                 col="grey",border="white",freq=FALSE,ylim=c(0,0.04))
+#pdf("plots/mixture_fitstor1.pdf")
+lines(density(cumulative_tor1_vector),lty=2,col="blue")
+sapply(1:2,plot.gompertz.components,mixture=dftor1)
+legend("topright", c("lifespan", "pdf","gompertz.mixture"), 
+       col=c("grey","blue","violet"),lwd=1,cex=0.75)
+#dev.off()
+```         
+
+### fob1
+```{r fob1}
+fob1<- lifespan_data[lifespan_data$genotype=="fob1",]
+
+#WT.BY4741.temp<-WT.BY4741[WT.BY4741$temp==30,] 
+#there is no need to this since I did filtering in the beginning
+
+fob1.media<-fob1[fob1$media=="YPD",]
+
+fob1.media<-fob1.media[fob1.media$mat=="MATalpha",]
+
+fob1.media= fob1.media[!is.na(fob1.media[,1]), ]
+dim(fob1.media)
+
+class(fob1.media$single_lifespan)
+str(fob1.media$single_lifespan)
+```
+```{r fob1 individuals }
+### fob1 individuals 
+fob1_lifespan_list=list()
+
+for (k in c(1:length(fob1.media$single_lifespan))){
+  # k=c(94:95)
+  fk<-fob1.media$single_lifespan[k]
+  #f<-unfactor(fk[k])
+  fob1_lifespan_single<-as.numeric(unlist(str_split(fk, ",")))
+  #fob1_lifespan_list<-mean(ref_lifespan_single)
+  fob1_lifespan_list[[length(fob1_lifespan_list)+1]]<-fob1_lifespan_single
+}
+
+length(fob1_lifespan_list)
+cumulative_fob1_lifespan<-unlist(fob1_lifespan_list)
+length(cumulative_fob1_lifespan)
+
+cumulative_fob1_vector<-na.omit(cumulative_fob1_lifespan)
+length(cumulative_fob1_vector)
+```
+### mixture fob1
+```{r mixture fob1}
+#no need to do sampling cause it is already small enough
+cumulative_fob1_mixGompertz<-fitmixEM(cumulative_fob1_vector,"gompertz", 2, initial=FALSE)
+
+cumulative_fob1_mixGompertz$estimate
+cumulative_fob1_mixGompertz$measures
+```
+
+
+###mixture plot of fob1
+
+```{r mixture plot of fob1}
+dffob1=data.frame(lambda=c(cumulative_fob1_mixGompertz$estimate[,1]),
+              shape=c(cumulative_fob1_mixGompertz$estimate[,2]),
+              rate=c(cumulative_fob1_mixGompertz$estimate[,3]))
+
+plot(hist(cumulative_fob1_vector),xlab="lifespan,divisions",                 col="grey",border="white",freq=FALSE,ylim=c(0,0.04))
+#pdf("plots/mixture_fitsfob1.pdf")
+lines(density(cumulative_fob1_vector),lty=2,col="blue")
+sapply(1:2,plot.gompertz.components,mixture=dffob1)
+legend("topright", c("lifespan", "pdf","gompertz.mixture"), 
+       col=c("grey","blue","violet"),lwd=1,cex=0.75)
+#dev.off()
+```            
+### sod2 lifespan
+```{r}
+sod2<- lifespan_data[lifespan_data$genotype=="sod2",]
+
+#WT.BY4741.temp<-WT.BY4741[WT.BY4741$temp==30,] 
+#there is no need to this since I did filtering in the beginning
+
+sod2.media<-sod2[sod2$media=="YPD",]
+
+sod2.media<-sod2.media[sod2.media$mat=="MATalpha",]
+
+sod2.media= sod2.media[!is.na(sod2.media[,1]), ]
+dim(sod2.media)
+
+class(sod2.media$single_lifespan)
+str(sod2.media$single_lifespan)
+
+```
+```
+```{r sod2 individuals }
+### sod2 individuals 
+sod2_lifespan_list=list()
+
+for (k in c(1:length(sod2.media$single_lifespan))){
+  # k=c(94:95)
+  fk<-sod2.media$single_lifespan[k]
+  #f<-unfactor(fk[k])
+  sod2_lifespan_single<-as.numeric(unlist(str_split(fk, ",")))
+  #sod2_lifespan_list<-mean(ref_lifespan_single)
+  sod2_lifespan_list[[length(sod2_lifespan_list)+1]]<-sod2_lifespan_single
+}
+
+length(sod2_lifespan_list)
+cumulative_sod2_lifespan<-unlist(sod2_lifespan_list)
+length(cumulative_sod2_lifespan)
+
+cumulative_sod2_vector<-na.omit(cumulative_sod2_lifespan)
+length(cumulative_sod2_vector)
+```
+### mixture sod2
+```{r mixture sod2}
+#no need to do sampling cause it is already small enough
+cumulative_sod2_mixGompertz<-fitmixEM(cumulative_sod2_vector,"gompertz", 2, initial=FALSE)
+
+cumulative_sod2_mixGompertz$estimate
+cumulative_sod2_mixGompertz$measures
+```
+
+###mixture plot of sod2
+
+```{r mixture plot of sod2}
+dfsod2=data.frame(lambda=c(cumulative_sod2_mixGompertz$estimate[,1]),
+              shape=c(cumulative_sod2_mixGompertz$estimate[,2]),
+              rate=c(cumulative_sod2_mixGompertz$estimate[,3]))
+
+plot(hist(cumulative_sod2_vector),xlab="lifespan,divisions",                 col="grey",border="white",freq=FALSE,ylim=c(0,0.04))
+#pdf("plots/mixture_fitssod2.pdf")
+lines(density(cumulative_sod2_vector),lty=2,col="blue")
+sapply(1:2,plot.gompertz.components,mixture=dfsod2)
+legend("topright", c("lifespan", "pdf","gompertz.mixture"), 
+       col=c("grey","blue","violet"),lwd=1,cex=0.75)
+#dev.off()
+```            
+### sir2 lifespan
+```{r}
+sir2<- lifespan_data[lifespan_data$genotype=="sir2",]
+dim(sir2)
+#WT.BY4741.temp<-WT.BY4741[WT.BY4741$temp==30,] 
+#there is no need to this since I did filtering in the beginning
+
+sir2.media<-sir2[sir2$media=="YPD",]
+dim(sir2.media)
+
+sir2.media<-sir2.media[sir2.media$mat=="MATalpha",]
+dim(sir2.media)
+
+sir2.media= sir2.media[!is.na(sir2.media[,1]), ]
+dim(sir2.media)
+
+```
+
+### sch9 lifespan
+```{r}
+sch9<- lifespan_data[lifespan_data$genotype=="sch9",]
+
+#WT.BY4741.temp<-WT.BY4741[WT.BY4741$temp==30,] 
+#there is no need to this since I did filtering in the beginning
+
+sch9.media<-sch9[sch9$media=="YPD",]
+
+sch9.media<-sch9.media[sch9.media$mat=="MATalpha",]
+
+sch9.media= sch9.media[!is.na(sch9.media[,1]), ]
+dim(sch9.media)
+
+class(sch9.media$single_lifespan)
+str(sch9.media$single_lifespan)
+
+```
+```
+```{r sch9 individuals }
+### sch9 individuals 
+sch9_lifespan_list=list()
+
+for (k in c(1:length(sch9.media$single_lifespan))){
+  # k=c(94:95)
+  fk<-sch9.media$single_lifespan[k]
+  #f<-unfactor(fk[k])
+  sch9_lifespan_single<-as.numeric(unlist(str_split(fk, ",")))
+  #sch9_lifespan_list<-mean(ref_lifespan_single)
+  sch9_lifespan_list[[length(sch9_lifespan_list)+1]]<-sch9_lifespan_single
+}
+
+length(sch9_lifespan_list)
+cumulative_sch9_lifespan<-unlist(sch9_lifespan_list)
+length(cumulative_sch9_lifespan)
+
+cumulative_sch9_vector<-na.omit(cumulative_sch9_lifespan)
+length(cumulative_sch9_vector)
+```
+### mixture sch9
+```{r mixture sch9}
+#no need to do sampling cause it is already small enough
+cumulative_sch9_mixGompertz<-fitmixEM(cumulative_sch9_vector,"gompertz", 2, initial=FALSE)
+
+cumulative_sch9_mixGompertz$estimate
+cumulative_sch9_mixGompertz$measures
+```
+
+###mixture plot of sch9
+
+```{r mixture plot of sch9}
+dfsch9=data.frame(lambda=c(cumulative_sch9_mixGompertz$estimate[,1]),
+              shape=c(cumulative_sch9_mixGompertz$estimate[,2]),
+              rate=c(cumulative_sch9_mixGompertz$estimate[,3]))
+
+plot(hist(cumulative_sch9_vector),xlab="lifespan,divisions",                 col="grey",border="white",freq=FALSE,ylim=c(0,0.08))
+#pdf("plots/mixture_fitssch9.pdf")
+lines(density(cumulative_sch9_vector),lty=2,col="blue")
+sapply(1:2,plot.gompertz.components,mixture=dfsch9)
+legend("topright", c("lifespan", "pdf","gompertz.mixture"), 
+       col=c("grey","blue","violet"),lwd=1,cex=0.75)
+#dev.off()
+```   
+
+```{r, sir2}
+
+sir2<- lifespan_data[lifespan_data$genotype=="sir2",]
+
+sir2.media<-sir2[sir2$media=="YPD",]
+
+sir2.media<-sir2.media[sir2.media$mat=="MATalpha",]
+
+sir2.media= sir2.media[!is.na(sir2.media[,1]), ]
+dim(sir2.media)
+
+class(sir2.media$single_lifespan)
+str(sir2.media$single_lifespan)
+
+
+
+
+### sir2 individuals 
+sir2_lifespan_list=list()
+
+for (k in c(1:length(sir2.media$single_lifespan))){
+  # k=c(94:95)
+  fk<-sir2.media$single_lifespan[k]
+  #f<-unfactor(fk[k])
+  sir2_lifespan_single<-as.numeric(unlist(str_split(fk, ",")))
+  #sir2_lifespan_list<-mean(ref_lifespan_single)
+  sir2_lifespan_list[[length(sir2_lifespan_list)+1]]<-sir2_lifespan_single
+}
+
+length(sir2_lifespan_list)
+cumulative_sir2_lifespan<-unlist(sir2_lifespan_list)
+length(cumulative_sir2_lifespan)
+
+cumulative_sir2_vector<-na.omit(cumulative_sir2_lifespan)
+length(cumulative_sir2_vector)
+
+sir2<-cumulative_sir2_vector
+
+### mixture sir2
+```
+```{r}
+#no need to do sampling cause it is already small enough
+cumulative_sir2_mixGompertz<-fitmixEM(cumulative_sir2_vector,"gompertz", 2, initial=FALSE)
+
+
+fitmixEM(sir2,"gompertz", 2, initial=FALSE)
+
+
+```
+
+```{r}
+cumulative_sir2_mixGompertz$estimate
+cumulative_sir2_mixGompertz$measures
+cumulative_sir2_mixGompertz$cluster
+
+
+###mixture plot of sch9
+
+
+dfsir2=data.frame(lambda=c(cumulative_sir2_mixGompertz$estimate[,1]),
+                  shape=c(cumulative_sir2_mixGompertz$estimate[,2]),
+                  rate=c(cumulative_sir2_mixGompertz$estimate[,3]))
+
+```
+
+```{r}
+
+hist(sir2,xlab="replicative lifespan, sir2",col="grey",border="white",breaks=5,las=1,
+     freq=FALSE,ylim=c(0,0.08),ylab="probability")
+lines(density(sir2),las=1,col="blue")
+x<-sapply(1:2,plot.gompertz.components,mixture=dfsir2)
+legend("topright", c("lifespan", "pdf", "gompertz.mixture"), 
+       col=c("grey","blue","darkred"),lwd=1,cex=0.75)
+
+
+```
+
+```{r}
+
+hist(cumulative_sir2_vector,breaks=5, xlab="replicative lifespan, divisions",col="grey",border="white",freq=FALSE,ylim=c(0,0.07))
+#pdf("plots/mixture_fitssir2.pdf")
+lines(density(cumulative_sir2_vector),lty=2,col="blue")
+sapply(1:2,plot.gompertz.components,mixture=dfsir2)
+legend("topright", c("lifespan", "pdf","gompertz.mixture"), 
+       col=c("grey","blue","darkred"),lwd=1,cex=0.75)
+#dev.off()
+
+
+```
+
+
+
+
+
